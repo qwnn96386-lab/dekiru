@@ -31,28 +31,20 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 
-	<!-- 這裡是你加入的權限說明 -->
+	<!-- 權限設定內容 -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>我們需要定位權限以確認您的位置</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>我們需要定位權限以在背景提供服務</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>我們需要定位權限以在背景提供服務</string>
-	<key>PermissionGroupNotification</key>
-	<string>我們需要通知權限以發送重要訊息</string>
     
+    <!-- 注意：iOS 通知不需要在 Info.plist 設定 Key，它是透過程式碼觸發的 -->
 </dict>
 </plist>
