@@ -1,21 +1,22 @@
-# 這是 Flutter iOS 專案的標準設定
-platform :ios, '14.0'
+# 載入 Flutter 的 iOS 小幫手檔案
+load File.join(File.dirname(File.realpath(__FILE__)), 'Flutter', 'podhelper.rb')
 
-# 加入此行確保套件能正常運行
-prepare_not_allowed_dependencies_hash = {}
+platform :ios, '14.0'
 
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
+  # 執行 Flutter 的套件安裝指令
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
+    # 套用 Flutter 預設的建置設定
     flutter_additional_ios_build_settings(target)
     
-    # --- 這裡開始是權限設定的重點 ---
+    # 你剛才設定的權限設定
     target.build_configurations.each do |config|
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
         '$(inherited)',
@@ -23,6 +24,5 @@ post_install do |installer|
         'PERMISSION_LOCATION=1'      # 開啟定位權限
       ]
     end
-    # --- 這裡結束 ---
   end
 end
