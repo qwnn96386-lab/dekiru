@@ -1,9 +1,6 @@
 name: my_first_app
 description: "A new Flutter project for permission testing."
-
-# 以下設定防止你不小心將套件發佈到 pub.dev
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -12,12 +9,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # iOS 風格的圖標（選用，但建議保留）
   cupertino_icons: ^1.0.6
-  
-  # 這是處理定位與通知權限的核心套件
   permission_handler: ^11.3.1
+  # 以下為新增實作邏輯所需套件
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  geolocator: ^10.1.0
+  geofence_service: ^6.0.0+1
+  flutter_local_notifications: ^17.0.0
 
 dev_dependencies:
   flutter_test:
@@ -25,9 +24,4 @@ dev_dependencies:
   flutter_lints: ^3.0.0
 
 flutter:
-  # 使用 Material Design 基礎組件
   uses-material-design: true
-
-  # 如果你未來有圖片資產，會加在下面
-  # assets:
-  #   - images/

@@ -1,3 +1,4 @@
+# 使用 Flutter 官方預設的基準路徑
 load File.join(File.dirname(File.realpath(__FILE__)), 'Flutter', 'podhelper.rb')
 
 platform :ios, '14.0'
@@ -6,6 +7,7 @@ target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
+  # 這裡直接定位到 Podfile 所在的目錄
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
 
@@ -14,12 +16,13 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
     
     target.build_configurations.each do |config|
-      # 修正：更安全的寫法來加入編譯宏定義
-      definitions = config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
-      definitions << 'PERMISSION_NOTIFICATIONS=1'
-      definitions << 'PERMISSION_LOCATION=1'
+      # 權限宣告：保持你需要的通知與定位設定
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_NOTIFICATIONS=1',
+        'PERMISSION_LOCATION=1'
+      ]
       
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = definitions
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
     end
   end
