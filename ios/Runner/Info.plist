@@ -37,20 +37,24 @@
         <string>UIInterfaceOrientationPortrait</string>
     </array>
     
+    <!-- 核心功能：定位權限 -->
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>需要您的位置以提供服務</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>需要背景定位以持續紀錄行程</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>需要背景定位以持續紀錄行程</string>
+    
+    <!-- 核心功能：運動感應 (優化電力消耗) -->
     <key>NSMotionUsageDescription</key>
-<string>我們需要您的運動數據來判斷您是否在步行，以優化電力消耗。</string>
+    <string>我們需要您的運動數據來判斷您是否在步行，以優化電力消耗。</string>
 
+    <!-- 背景模式：確保 App 在背景能執行任務 -->
     <key>UIBackgroundModes</key>
     <array>
-        <string>fetch</string>
-        <string>location</string>
-        <string>remote-notification</string>
+        <string>fetch</string>              <!-- 背景數據抓取 -->
+        <string>location</string>           <!-- 背景持續定位 -->
+        <string>remote-notification</string> <!-- 遠端推送通知 -->
     </array>
 </dict>
 </plist>
