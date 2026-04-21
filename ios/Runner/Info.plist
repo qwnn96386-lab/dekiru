@@ -2,12 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CADisableMinimumFrameDurationOnPhone</key>
-    <true/>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>$(DEVELOPMENT_LANGUAGE)</string>
-    <key>CFBundleDisplayName</key>
-    <string>My App</string>
+    <!-- 基礎配置 (解決 Sideloadly 報錯的核心) -->
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -26,8 +21,36 @@
     <string>$(FLUTTER_BUILD_NUMBER)</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
-    <key>UIApplicationSupportsIndirectInputEvents</key>
-    <true/>
+
+    <!-- 定位權限描述 -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>我們需要您的定位權限來在地圖上顯示您的當前位置。</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>我們需要背景定位權限以確保在螢幕關閉時仍能紀錄您的行程軌跡。</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>我們需要背景定位權限以確保在螢幕關閉時仍能紀錄您的行程軌跡。</string>
+
+    <!-- 精準定位 (iOS 14+) -->
+    <key>NSLocationTemporaryUsageDescriptionDictionary</key>
+    <dict>
+        <key>FineLocation</key>
+        <string>此功能需要精準定位以提供更準確的導航服務。</string>
+    </dict>
+
+    <!-- 背景模式 -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>location</string>
+        <string>fetch</string>
+        <string>remote-notification</string>
+    </array>
+
+    <!-- 運動感應與通知 -->
+    <key>NSMotionUsageDescription</key>
+    <string>我們使用運動感應器來判斷您的運動狀態，節省定位時的電力消耗。</string>
+    <key>PermissionGroupNotification</key>
+    <string>我們需要發送通知以告知您進入了監控範圍。</string>
+
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
     <key>UIMainStoryboardFile</key>
@@ -36,25 +59,11 @@
     <array>
         <string>UIInterfaceOrientationPortrait</string>
     </array>
-    
-    <!-- 核心功能：定位權限 -->
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>需要您的位置以提供服務</string>
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>需要背景定位以持續紀錄行程</string>
-    <key>NSLocationAlwaysUsageDescription</key>
-    <string>需要背景定位以持續紀錄行程</string>
-    
-    <!-- 核心功能：運動感應 (優化電力消耗) -->
-    <key>NSMotionUsageDescription</key>
-    <string>我們需要您的運動數據來判斷您是否在步行，以優化電力消耗。</string>
-
-    <!-- 背景模式：確保 App 在背景能執行任務 -->
-    <key>UIBackgroundModes</key>
-    <array>
-        <string>fetch</string>              <!-- 背景數據抓取 -->
-        <string>location</string>           <!-- 背景持續定位 -->
-        <string>remote-notification</string> <!-- 遠端推送通知 -->
-    </array>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <false/>
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
+    <key>UIApplicationSupportsIndirectInputEvents</key>
+    <true/>
 </dict>
 </plist>
