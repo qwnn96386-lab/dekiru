@@ -1,23 +1,24 @@
-name: my_first_app
-description: "A new Flutter project for permission testing."
+name: new_test
+description: A new Flutter project.
 publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
   permission_handler: ^11.3.1
-  # 以下為新增實作邏輯所需套件
   sqflite: ^2.3.3+1
-  path: ^1.8.3
-  geolocator: ^10.1.0
+  path: ^1.9.0
+  # 核心定位套件
   geofence_service: ^6.0.0+1
-  fl_location: ^5.0.0
-  flutter_local_notifications: ^17.0.0
+  fl_location: ^3.1.0 # 必須是 3.1.0 以配合 geofence_service
+  geolocator: ^10.1.1  # 補上這行，解決 import 錯誤
+  flutter_local_notifications: ^17.2.4
+  timezone: ^0.9.4
 
 dev_dependencies:
   flutter_test:
