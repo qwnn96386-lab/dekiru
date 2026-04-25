@@ -1,32 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-
-// 請確保你有這兩個檔案
-import 'db_helper.dart'; 
 import 'geofence_manager.dart';
+import 'screens/home_screen.dart';
+import 'screens/radar_screen.dart';
+import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // 初始化地理圍欄
-  await GeofenceManager().init();
-  
-  runApp(const MaterialApp(
-    home: MainListScreen(),
-    debugShowCheckedModeBanner: false,
-  ));
+  runApp(const MyApp());
 }
 
-class MainListScreen extends StatefulWidget {
-  const MainListScreen({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
   @override
-  State<MainListScreen> createState() => _MainListScreenState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: '店家雷達',
+      theme: ThemeData(
+        fontFamily: 'Inter',
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+      ),
+      home: const MainFrame(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
 }
 
-class _MainListScreenState extends State<MainListScreen> {
-  final _db = DBHelper();
-  final _geo = GeofenceManager();
-  List<Shop> _shops = [];
+class MainFrame extends StatefulWidget {
+  const MainFrame({super.key});
+  @override
+  State<MainFrame> createState() => _MainFrameState();
+}
+
+class _MainFrameState extends State<MainFrame> {
+  final GeofenceManager _geo = GeofenceManager();
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -34,131 +43,72 @@ class _MainListScreenState extends State<MainListScreen> {
     _geo.onStatusUpdate = () {
       if (mounted) setState(() {});
     };
-    _initSystem();
+    _initApp();
   }
 
-  Future<void> _initSystem() async {
-    // 請求權限
-    Map<Permission, PermissionStatus> statuses = await [
-      Permission.locationWhenInUse,
-      Permission.locationAlways,
-      Permission.sensors,
-      Permission.notification
-    ].request();
+  Future<void> _initApp() async {
+    try {
+      Map<Permission, PermissionStatus> statuses = await [
+        Permission.location,
+        Permission.notification,
+        Permission.activityRecognition,
+      ].request();
 
-    if (statuses[Permission.locationAlways]!.isGranted) {
-       _refreshData();
-    } else {
-       // 如果沒給權限，可以在這裡跳出提示
-       print("需要背景定位權限才能運作");
+      if (statuses[Permission.location]?.isGranted ?? false) {
+        await _geo.init();
+        await _geo.refreshFences();
+        if (mounted) {
+          setState(() { _geo.currentStatus = "雷達掃描中..."; });
+        }
+      } else {
+        if (mounted) {
+          setState(() { _geo.currentStatus = "請前往手機設定開啟定位權限"; });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() { _geo.currentStatus = "啟動異常"; });
+      }
     }
   }
 
-  Future<void> _refreshData() async {
-    final list = await _db.getShops();
-    setState(() {
-      _shops = list;
-    });
-    await _geo.refreshFences();
-  }
-
   @override
   Widget build(BuildContext context) {
+    // 修正：確保 RadarScreen 接收 geo 參數
+    final List<Widget> screens = [
+      HomeScreen(geo: _geo),
+      RadarScreen(geo: _geo),
+      const SettingsScreen(),
+    ];
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FD),
       appBar: AppBar(
-        backgroundColor: Colors.indigo,
+        backgroundColor: Colors.white,
+        elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("店家監控雷達", style: TextStyle(color: Colors.white, fontSize: 18)),
-            Text(
-              _geo.currentStatus,
-              style: const TextStyle(color: Colors.greenAccent, fontSize: 10),
-            ),
+            const Text("當前定位狀態", style: TextStyle(fontSize: 10, color: Colors.indigo, fontWeight: FontWeight.bold)),
+            Text(_geo.currentStatus, style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w500)),
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle, color: Colors.white),
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (c) => const AddShopScreen()),
-              );
-              _refreshData();
-            },
-          )
+          IconButton(icon: const Icon(Icons.refresh, size: 20), onPressed: () => _geo.refreshFences())
         ],
       ),
-      body: _shops.isEmpty
-          ? const Center(child: Text("目前沒有店家，請點擊右上角新增"))
-          : ListView.builder(
-              itemCount: _shops.length,
-              itemBuilder: (c, i) => ListTile(
-                leading: const Icon(Icons.store, color: Colors.indigo),
-                title: Text(_shops[i].name),
-                subtitle: Text("緯度: ${_shops[i].lat}, 經度: ${_shops[i].lng}"),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: () async {
-                    if (_shops[i].id != null) {
-                      await _db.deleteShop(_shops[i].id!);
-                      _refreshData();
-                    }
-                  },
-                ),
-              ),
-            ),
-    );
-  }
-}
-
-// 二級介面：新增店家
-class AddShopScreen extends StatefulWidget {
-  const AddShopScreen({super.key});
-  @override
-  State<AddShopScreen> createState() => _AddShopScreenState();
-}
-
-class _AddShopScreenState extends State<AddShopScreen> {
-  final _nameController = TextEditingController();
-  final _latController = TextEditingController();
-  final _lngController = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("新增店家資料")),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            TextField(controller: _nameController, decoration: const InputDecoration(labelText: "店家名稱", prefixIcon: Icon(Icons.edit))),
-            const SizedBox(height: 16),
-            TextField(controller: _latController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "緯度", prefixIcon: Icon(Icons.location_on))),
-            const SizedBox(height: 16),
-            TextField(controller: _lngController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "經度", prefixIcon: Icon(Icons.location_on))),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
-                onPressed: () async {
-                  if (_nameController.text.isEmpty) return;
-                  await DBHelper().insertShop(Shop(
-                    name: _nameController.text,
-                    lat: double.parse(_latController.text),
-                    lng: double.parse(_lngController.text),
-                  ));
-                  if (mounted) Navigator.pop(context);
-                },
-                child: const Text("儲存並啟動監控"),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
+      body: screens[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        selectedItemColor: Colors.indigo,
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: "首頁"),
+          BottomNavigationBarItem(icon: Icon(Icons.radar_outlined), label: "雷達"),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "會員"),
+        ],
       ),
     );
   }

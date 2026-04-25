@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:geofence_service/geofence_service.dart' hide LocationAccuracy;
-import 'package:geolocator/geolocator.dart' hide ActivityType; 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'db_helper.dart';
 
@@ -9,134 +9,81 @@ class GeofenceManager {
   factory GeofenceManager() => _instance;
   GeofenceManager._internal();
 
-  final _dbHelper = DBHelper();
-  final _notifications = FlutterLocalNotificationsPlugin();
-  final _geofenceService = GeofenceService.instance;
+  final _geofenceService = GeofenceService.instance.setup(
+    interval: 5000,
+    accuracy: 100,
+    useActivityRecognition: true,
+    allowMockLocations: false,
+    printDevLog: false,
+  );
 
-  String currentStatus = "環境感知中...";
-  Position? _lastWakeupPos;
-  Timer? _sleepTimer;
+  final _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  
+  String currentStatus = "雷達系統待命";
+  
+  Shop? _nearestShop; 
+  Shop? get nearestShop => _nearestShop; 
+  
+  double radarRange = 100.0;
   Function? onStatusUpdate;
 
+  // 定位監控中的座標
+  double? _lastLat;
+  double? _lastLng;
+
   Future<void> init() async {
-    const ios = DarwinInitializationSettings();
-    await _notifications.initialize(const InitializationSettings(iOS: ios));
-
-    _geofenceService.setup(
-      interval: 5000,
-      accuracy: 100,
-      loiteringDelayMs: 15000,
-      statusChangeDelayMs: 1000,
-      useActivityRecognition: true,
-    );
-
-    _setupListeners();
-  }
-
-  Future<void> refreshFences() async {
-    _log("更新 19+1 雷達...");
-    Position pos = await Geolocator.getCurrentPosition();
-    List<Shop> all = await _dbHelper.getShops();
-
-    all.sort((a, b) => Geolocator.distanceBetween(pos.latitude, pos.longitude, a.lat, a.lng)
-        .compareTo(Geolocator.distanceBetween(pos.latitude, pos.longitude, b.lat, b.lng)));
-
-    List<Geofence> fenceList = [];
+    // 綁定定位更新
+    _geofenceService.addLocationChangeListener((Location location) async {
+      _lastLat = location.latitude;
+      _lastLng = location.longitude;
+      currentStatus = "經度: ${location.longitude.toStringAsFixed(6)}, 緯度: ${location.latitude.toStringAsFixed(6)}";
+      
+      await _updateNearestShop(_lastLat!, _lastLng!);
+      onStatusUpdate?.call(); // 通知 UI 更新
+    });
     
-    for (int i = 0; i < all.length && i < 19; i++) {
-      fenceList.add(Geofence(
-        id: 'SHOP_${all[i].name}',
-        latitude: all[i].lat,
-        longitude: all[i].lng,
-        radius: [GeofenceRadius(id: 'r10', length: 10)],
-      ));
-    }
-
-    if (all.length >= 20) {
-      double r = Geolocator.distanceBetween(pos.latitude, pos.longitude, all[19].lat, all[19].lng);
-      fenceList.add(Geofence(
-        id: 'MOTHER_FENCE',
-        latitude: pos.latitude,
-        longitude: pos.longitude,
-        radius: [GeofenceRadius(id: 'm_radius', length: r)],
-      ));
-    }
-
-    _geofenceService.stop();
-    _geofenceService.start(fenceList).catchError((e) => print(e));
-    _log("雷達已更新 (半徑 10m)");
+    // 啟動服務
+    await _geofenceService.start();
   }
 
-  void _setupListeners() {
-    _geofenceService.addActivityChangeListener((Activity activity) {
-      _onActivityChanged(activity);
-    } as ActivityChanged);
-
-    _geofenceService.addGeofenceStatusChangeListener((
-      Geofence geofence, 
-      GeofenceRadius geofenceRadius, 
-      GeofenceStatus geofenceStatus, 
-      Location location
-    ) {
-      _onGeofenceStatusChanged(geofence, geofenceRadius, geofenceStatus, location);
-    } as GeofenceStatusChanged);
+  // --- 修復：新增 refreshFences 方法 ---
+  Future<void> refreshFences() async {
+    if (_lastLat != null && _lastLng != null) {
+      await _updateNearestShop(_lastLat!, _lastLng!);
+    } else {
+      // 若尚未有座標，僅更新店家列表（這裡可視需求擴充）
+      currentStatus = "尋找衛星定位中...";
+    }
+    onStatusUpdate?.call();
   }
 
-  // 修改處：使用 STILL 與 IN_VEHICLE
-  Future<void> _onActivityChanged(Activity activity) async {
-    if (activity.type == ActivityType.STILL) {
-      _sleepTimer?.cancel();
-      _sleepTimer = Timer(const Duration(minutes: 3), () {
-        _geofenceService.stop();
-        _log("智慧休眠中 (靜止 > 3min)");
-      });
-    } else if (activity.type == ActivityType.WALKING) {
-      _sleepTimer?.cancel();
-      Position now = await Geolocator.getCurrentPosition();
-      
-      double dist = (_lastWakeupPos == null) ? 999 : 
-          Geolocator.distanceBetween(_lastWakeupPos!.latitude, _lastWakeupPos!.longitude, now.latitude, now.longitude);
-
-      if (dist > 10) { 
-        _lastWakeupPos = now;
-        await refreshFences();
-        _log("偵測走路且移動 > 10m");
-      }
-    } else if (activity.type == ActivityType.IN_VEHICLE) {
-      _geofenceService.stop();
-      _log("高速移動中：暫停雷達");
-    }
-  }
-
-  Future<void> _onGeofenceStatusChanged(
-    Geofence geofence, 
-    GeofenceRadius geofenceRadius, 
-    GeofenceStatus geofenceStatus, 
-    Location location
-  ) async {
-    if (geofence.id == 'MOTHER_FENCE' && geofenceStatus == GeofenceStatus.EXIT) {
-      await refreshFences();
-      return;
+  Future<void> _updateNearestShop(double userLat, double userLng) async {
+    final shops = await DBHelper().getShops();
+    if (shops.isEmpty) { 
+      _nearestShop = null; 
+      return; 
     }
 
-    if (geofenceStatus == GeofenceStatus.DWELL) {
-      Position p = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      double checkDist = Geolocator.distanceBetween(p.latitude, p.longitude, geofence.latitude, geofence.longitude);
-      
-      if (checkDist <= 15) {
-        _sendNotify(geofence.id.replaceAll('SHOP_', ''));
+    Shop? closest;
+    double minDistance = double.infinity;
+
+    for (var shop in shops) {
+      double d = _calculateDistance(userLat, userLng, shop.lat, shop.lng);
+      if (d < minDistance) { 
+        minDistance = d; 
+        closest = shop; 
       }
     }
+
+    // 若最近店家在雷達範圍內則顯示，否則設為 null
+    _nearestShop = (minDistance <= radarRange) ? closest : null;
   }
 
-  void _sendNotify(String name) async {
-    const ios = DarwinNotificationDetails(presentAlert: true, presentSound: true);
-    await _notifications.show(0, "進入 $name", "享回饋！", const NotificationDetails(iOS: ios));
-  }
-
-  void _log(String msg) {
-    currentStatus = msg;
-    if (onStatusUpdate != null) onStatusUpdate!();
-    print(msg);
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const p = 0.017453292519943295;
+    final a = 0.5 - math.cos((lat2 - lat1) * p) / 2 +
+              math.cos(lat1 * p) * math.cos(lat2 * p) *
+              (1 - math.cos((lon2 - lon1) * p)) / 2;
+    return 12742 * math.asin(math.sqrt(a)) * 1000;
   }
 }

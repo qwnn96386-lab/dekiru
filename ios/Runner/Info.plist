@@ -2,7 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- 基礎配置 (解決 Sideloadly 報錯的核心) -->
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -10,7 +9,7 @@
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>my_app</string>
+    <string>$(PRODUCT_NAME)</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -22,14 +21,14 @@
     <key>LSRequiresIPhoneOS</key>
     <true/>
 
-    <!-- 定位權限描述 -->
+    <!-- 定位權限說明 -->
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>我們需要您的定位權限來在地圖上顯示您的當前位置。</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>我們需要背景定位權限以確保在螢幕關閉時仍能紀錄您的行程軌跡。</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>我們需要背景定位權限以確保在螢幕關閉時仍能紀錄您的行程軌跡。</string>
-
+    
     <!-- 精準定位 (iOS 14+) -->
     <key>NSLocationTemporaryUsageDescriptionDictionary</key>
     <dict>
@@ -37,7 +36,7 @@
         <string>此功能需要精準定位以提供更準確的導航服務。</string>
     </dict>
 
-    <!-- 背景模式 -->
+    <!-- 背景運作模式 -->
     <key>UIBackgroundModes</key>
     <array>
         <string>location</string>
@@ -45,9 +44,11 @@
         <string>remote-notification</string>
     </array>
 
-    <!-- 運動感應與通知 -->
+    <!-- 運動感應 (Permission.sensors) -->
     <key>NSMotionUsageDescription</key>
     <string>我們使用運動感應器來判斷您的運動狀態，節省定位時的電力消耗。</string>
+    
+    <!-- 通知描述 -->
     <key>PermissionGroupNotification</key>
     <string>我們需要發送通知以告知您進入了監控範圍。</string>
 
@@ -59,8 +60,6 @@
     <array>
         <string>UIInterfaceOrientationPortrait</string>
     </array>
-    <key>UIViewControllerBasedStatusBarAppearance</key>
-    <false/>
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
     <key>UIApplicationSupportsIndirectInputEvents</key>

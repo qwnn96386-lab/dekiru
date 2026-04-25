@@ -32,5 +32,4 @@ Runner/GeneratedPluginRegistrant.*
 # 確保這些檔案一定會被上傳到 GitHub
 !ios/Flutter/podhelper.rb
 !ios/Flutter/Flutter.podspec
-!ios/Flutter/Generated.xcconfig
 !ios/Flutter/flutter_export_environment.sh

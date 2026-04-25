@@ -1,5 +1,5 @@
-name: new_test
-description: A new Flutter project.
+name: shop_radar_assistant
+description: 自動偵測周邊店家並快速開啟行動支付與載具的行動助手。
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -13,10 +13,9 @@ dependencies:
   permission_handler: ^11.3.1
   sqflite: ^2.3.3+1
   path: ^1.9.0
-  # 核心定位套件
   geofence_service: ^6.0.0+1
-  fl_location: ^3.1.0 # 必須是 3.1.0 以配合 geofence_service
-  geolocator: ^10.1.1  # 補上這行，解決 import 錯誤
+  geolocator: ^10.1.1
+  fl_location: ^3.1.0 
   flutter_local_notifications: ^17.2.4
   timezone: ^0.9.4
 
