@@ -1,15 +1,14 @@
-name: iOS_Build
+name: iOS_Full_Build
 
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch: # 允許你手動點擊執行
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Flutter
@@ -17,26 +16,21 @@ jobs:
         with:
           flutter-version: '3.19.0'
           channel: 'stable'
+          cache: true
 
-      - name: Project Cleanup
-        run: |
-          rm -rf android
-          flutter create --platforms ios .
-          flutter pub get
+      - name: Precache iOS
+        run: flutter precache --ios
 
-      - name: CocoaPods Setup
-        run: |
-          cd ios
-          # 檢查是否有 Podfile，沒有就建立一個
-          if [ ! -f Podfile ]; then
-            flutter create --platforms ios .
-          fi
-          pod repo update
-          pod install
-          cd ..
+      - name: Install Dependencies
+        run: flutter pub get
 
+      # 注意：我們不手動 cd ios 執行 pod install
+      # 讓 flutter build 直接啟動，它會自動偵測 Podfile 並補全 Workspace
       - name: Build iOS
-        run: flutter build ios --release --no-codesign
+        run: |
+          # 僅更新 repo 以確保能下載最新 iOS 原生代碼
+          pod repo update
+          flutter build ios --release --no-codesign
 
       - name: Upload Artifact
         if: success()
