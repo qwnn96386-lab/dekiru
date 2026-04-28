@@ -1,4 +1,4 @@
-name: iOS_Pure_Build
+name: iOS_Full_Build
 
 on:
   push:
@@ -8,7 +8,7 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Flutter
@@ -17,28 +17,24 @@ jobs:
           flutter-version: '3.19.0'
           channel: 'stable'
 
-      - name: Pure iOS Environment Setup
+      - name: Clean and Reconfigure
         run: |
           rm -rf android
-          # 強制重新生成 iOS 專案結構，確保環境純淨
           flutter create --platforms ios .
+          flutter pub get
 
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Build iOS (Simulator version)
+      - name: Build iOS Simulator
         run: |
           cd ios
           pod repo update
-          # 這裡我們不跑 pod install，讓 flutter build 自動處理
+          pod install
           cd ..
-          # 關鍵修改：編譯模擬器版本，不需要 Apple 簽章也能成功
-          flutter build ios --simulator --debug
+          # 編譯指令優化：確保排除簽章干擾，並產出 debug 版模擬器檔案
+          flutter build ios --simulator --debug --no-codesign
 
-      - name: Upload Artifact
+      - name: Upload Runner.app
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ios-radar-app
-          # 模擬器編譯出的路徑與實機不同，這裡要改
           path: build/ios/iphonesimulator/Runner.app
