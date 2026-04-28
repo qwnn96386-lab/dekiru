@@ -1,4 +1,4 @@
-name: iOS_Full_Build
+name: iOS_Pure_Build
 
 on:
   push:
@@ -8,7 +8,7 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Flutter
@@ -16,20 +16,24 @@ jobs:
         with:
           flutter-version: '3.19.0'
           channel: 'stable'
-          cache: true
 
-      - name: Precache iOS
-        run: flutter precache --ios
+      # 關鍵步驟：在 pub get 之前，強行刪除 android 資料夾
+      # 這樣 flutter tool 就會認定這是一個「純 iOS 專案」，不再檢查 Android Embedding
+      - name: Pure iOS Environment Setup
+        run: |
+          rm -rf android
+          flutter create --platforms ios .
 
       - name: Install Dependencies
         run: flutter pub get
 
-      # 注意：我們不手動 cd ios 執行 pod install
-      # 讓 flutter build 直接啟動，它會自動偵測 Podfile 並補全 Workspace
+      # 執行 iOS 編譯
+      # --no-codesign 讓編譯在 GitHub 不需要憑證也能產出完整 Runner.app
       - name: Build iOS
         run: |
-          # 僅更新 repo 以確保能下載最新 iOS 原生代碼
+          cd ios
           pod repo update
+          cd ..
           flutter build ios --release --no-codesign
 
       - name: Upload Artifact
