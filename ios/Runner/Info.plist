@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleDisplayName</key>
+    <string>店家雷達</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -9,7 +13,7 @@
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>$(PRODUCT_NAME)</string>
+    <string>shop_radar_assistant</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -21,36 +25,45 @@
     <key>LSRequiresIPhoneOS</key>
     <true/>
 
-    <!-- 定位權限說明 -->
+    <!-- 1. 定位權限 (背景雷達必備 - 保留) -->
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>我們需要您的定位權限來在地圖上顯示您的當前位置。</string>
+    <string>我們需要您的定位權限來偵測周邊店家並提供服務。</string>
     <key>NSLocationAlwaysUsageDescription</key>
-    <string>我們需要背景定位權限以確保在螢幕關閉時仍能紀錄您的行程軌跡。</string>
+    <string>為了在您抵達店家時能自動顯示會員卡，我們需要背景定位權限。</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>我們需要背景定位權限以確保在螢幕關閉時仍能紀錄您的行程軌跡。</string>
+    <string>為了在您抵達店家時能自動顯示會員卡，我們需要背景定位權限。</string>
     
-    <!-- 精準定位 (iOS 14+) -->
-    <key>NSLocationTemporaryUsageDescriptionDictionary</key>
-    <dict>
-        <key>FineLocation</key>
-        <string>此功能需要精準定位以提供更準確的導航服務。</string>
-    </dict>
+    <!-- 2. 運動感應權限 (優化省電必備 - 保留) -->
+    <key>NSMotionUsageDescription</key>
+    <string>使用運動感應器能顯著降低背景定位時的電力消耗。</string>
 
-    <!-- 背景運作模式 -->
+    <!-- 3. 藍牙權限 (防止定位套件掃描 iBeacon 時閃退 - 保留) -->
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>我們使用藍牙輔助定位，以確保在室內也能精準偵測店家。</string>
+    <key>NSBluetoothPeripheralUsageDescription</key>
+    <string>我們使用藍牙輔助定位，以確保在室內也能精準偵測店家。</string>
+
+    <!-- 4. 支付 App 跳轉白名單 (新增：解決 iOS 跳轉問題) -->
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>jkos</string>
+        <string>linepay</string>
+    </array>
+
+    <!-- 5. 背景模式 (確保通知與定位不被中斷 - 保留) -->
     <key>UIBackgroundModes</key>
     <array>
         <string>location</string>
         <string>fetch</string>
         <string>remote-notification</string>
+        <string>processing</string>
     </array>
 
-    <!-- 運動感應 (Permission.sensors) -->
-    <key>NSMotionUsageDescription</key>
-    <string>我們使用運動感應器來判斷您的運動狀態，節省定位時的電力消耗。</string>
-    
-    <!-- 通知描述 -->
-    <key>PermissionGroupNotification</key>
-    <string>我們需要發送通知以告知您進入了監控範圍。</string>
+    <!-- 6. 註冊背景任務 ID (防止背景執行時被閃退 - 保留) -->
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array>
+        <string>$(PRODUCT_BUNDLE_IDENTIFIER).location_update</string>
+    </array>
 
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
@@ -64,5 +77,7 @@
     <true/>
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
 </dict>
 </plist>
