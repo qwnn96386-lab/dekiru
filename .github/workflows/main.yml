@@ -1,51 +1,30 @@
-name: "iOS 完整編譯 (排除 Android 錯誤)"
+# 1. 載入 Flutter 的輔助腳本 (這行沒加會導致 "No dependencies" 錯誤)
+load File.join(File.dirname(File.realpath(__FILE__)), 'Flutter', 'podhelper.rb')
 
-on:
-  push:
-    branches: [ main, master ]
+platform :ios, '14.0'
 
-jobs:
-  build-ios:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.0'
-          channel: 'stable'
-          cache: true
+  # 2. 這行是關鍵，它會把 pubspec.yaml 裡的套件自動加入 iOS 編譯
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+end
 
-      # 核心步驟：強制移除所有 Android 相關配置，防止 pub get 報錯
-      - name: Strip Android Configuration
-        run: |
-          rm -rf android
-          flutter create --platforms ios .
-
-      - name: Install dependencies
-        run: |
-          flutter clean
-          flutter pub get
-
-      # 處理 iOS 原生依賴 (確保權限標記與支付跳轉白名單被編入)
-      - name: CocoaPods Install
-        run: |
-          cd ios
-          rm -rf Pods
-          rm -rf Podfile.lock
-          # 更新 repo 確保抓到最新版的 url_launcher_ios 等原生代碼
-          pod install --repo-update
-          cd ..
-
-      # 編譯正式版，--no-codesign 讓編譯在 GitHub 環境下也能產出完整的 .app 內容
-      - name: Build iOS
-        run: flutter build ios --release --no-codesign
-
-      # 上傳產出物，你可以在 GitHub Actions 頁面下載這個 Runner.app
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-radar-app
-          path: build/ios/iphoneos/Runner.app
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    
+    target.build_configurations.each do |config|
+      # 權限標記 (定位、通知、感測器)
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_LOCATION=1',
+        'PERMISSION_NOTIFICATIONS=1',
+        'PERMISSION_SENSORS=1',
+        'PERMISSION_BACKGROUND_LOCATION=1'
+      ]
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+    end
+  end
+end
