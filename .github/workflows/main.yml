@@ -17,28 +17,28 @@ jobs:
           flutter-version: '3.19.0'
           channel: 'stable'
 
-      # 關鍵步驟：在 pub get 之前，強行刪除 android 資料夾
-      # 這樣 flutter tool 就會認定這是一個「純 iOS 專案」，不再檢查 Android Embedding
       - name: Pure iOS Environment Setup
         run: |
           rm -rf android
+          # 強制重新生成 iOS 專案結構，確保環境純淨
           flutter create --platforms ios .
 
       - name: Install Dependencies
         run: flutter pub get
 
-      # 執行 iOS 編譯
-      # --no-codesign 讓編譯在 GitHub 不需要憑證也能產出完整 Runner.app
-      - name: Build iOS
+      - name: Build iOS (Simulator version)
         run: |
           cd ios
           pod repo update
+          # 這裡我們不跑 pod install，讓 flutter build 自動處理
           cd ..
-          flutter build ios --release --no-codesign
+          # 關鍵修改：編譯模擬器版本，不需要 Apple 簽章也能成功
+          flutter build ios --simulator --debug
 
       - name: Upload Artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ios-radar-app
-          path: build/ios/iphoneos/Runner.app
+          # 模擬器編譯出的路徑與實機不同，這裡要改
+          path: build/ios/iphonesimulator/Runner.app
