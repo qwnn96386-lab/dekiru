@@ -1,25 +1,15 @@
-load File.join(File.dirname(File.realpath(__FILE__)), 'Flutter', 'podhelper.rb')
-
-platform :ios, '14.0'
-
-target 'Runner' do
-  use_frameworks!
-  use_modular_headers!
-
-  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-end
-
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
     
     target.build_configurations.each do |config|
-      # 關鍵：這裡就是你說的「進不去」的權限開關
+      # 完整標記：定位、通知、感測器、背景定位
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
         '$(inherited)',
         'PERMISSION_LOCATION=1',
         'PERMISSION_NOTIFICATIONS=1',
-        'PERMISSION_SENSORS=1'
+        'PERMISSION_SENSORS=1',
+        'PERMISSION_BACKGROUND_LOCATION=1'
       ]
       
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
