@@ -1,4 +1,4 @@
-name: iOS_Full_Build
+name: iOS_Pure_Build
 
 on:
   push:
@@ -8,7 +8,7 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Flutter
@@ -17,22 +17,27 @@ jobs:
           flutter-version: '3.19.0'
           channel: 'stable'
 
-      - name: Clean and Reconfigure
+      - name: Environment Clean
         run: |
+          # 強制移除所有可能殘留 Windows 路徑的檔案
           rm -rf android
+          rm -f ios/Flutter/Generated.xcconfig
+          rm -f ios/Flutter/flutter_export_environment.sh
+          # 讓 Flutter 根據目前的 macOS 環境重新產生專案檔
           flutter create --platforms ios .
-          flutter pub get
+
+      - name: Install Dependencies
+        run: flutter pub get
 
       - name: Build iOS Simulator
         run: |
           cd ios
-          pod repo update
-          pod install
+          # 這裡會重新生成正確的 podhelper 連結
+          pod install --repo-update
           cd ..
-          # 編譯指令優化：確保排除簽章干擾，並產出 debug 版模擬器檔案
           flutter build ios --simulator --debug --no-codesign
 
-      - name: Upload Runner.app
+      - name: Upload Artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
