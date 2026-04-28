@@ -3,50 +3,31 @@ import 'package:path/path.dart';
 
 class Shop {
   final int? id;
+  final String name, barcode, specialRule;
+  final double lat, lng;
+  final bool isSpecial;
+
+  Shop({this.id, required this.name, required this.lat, required this.lng, this.barcode = "", this.isSpecial = false, this.specialRule = ""});
+
+  Map<String, dynamic> toMap() => {
+    if (id != null) 'id': id,
+    'name': name, 'lat': lat, 'lng': lng, 'barcode': barcode, 'isSpecial': isSpecial ? 1 : 0, 'specialRule': specialRule
+  };
+
+  factory Shop.fromMap(Map<String, dynamic> m) => Shop(
+    id: m['id'] as int?, name: m['name'] as String,
+    lat: (m['lat'] as num).toDouble(), lng: (m['lng'] as num).toDouble(),
+    barcode: m['barcode'] ?? "", isSpecial: m['isSpecial'] == 1, specialRule: m['specialRule'] ?? "",
+  );
+}
+
+class PaymentApp {
+  final int? id;
   final String name;
-  final double lat;
-  final double lng;
-  final String icon;       // 新增：🏪 
-  final String barcode;    // 新增：會員條碼或載具
-  final String payments;   // 新增：以逗號隔開的支付方式 (例如 "街口,LinePay")
-  final String offers;     // 新增：特惠資訊
-
-  Shop({
-    this.id, 
-    required this.name, 
-    required this.lat, 
-    required this.lng,
-    this.icon = "🏪",
-    this.barcode = "",
-    this.payments = "",
-    this.offers = "",
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      if (id != null) 'id': id,
-      'name': name,
-      'lat': lat,
-      'lng': lng,
-      'icon': icon,
-      'barcode': barcode,
-      'payments': payments,
-      'offers': offers,
-    };
-  }
-
-  factory Shop.fromMap(Map<String, dynamic> map) {
-    return Shop(
-      id: map['id'] as int?,
-      name: map['name'] as String,
-      lat: (map['lat'] as num).toDouble(),
-      lng: (map['lng'] as num).toDouble(),
-      icon: map['icon'] ?? "🏪",
-      barcode: map['barcode'] ?? "",
-      payments: map['payments'] ?? "",
-      offers: map['offers'] ?? "",
-    );
-  }
+  final double reward;
+  PaymentApp({this.id, required this.name, required this.reward});
+  Map<String, dynamic> toMap() => {'id': id, 'name': name, 'reward': reward};
+  factory PaymentApp.fromMap(Map<String, dynamic> m) => PaymentApp(id: m['id'] as int, name: m['name'] as String, reward: (m['reward'] as num).toDouble());
 }
 
 class DBHelper {
@@ -55,21 +36,29 @@ class DBHelper {
   DBHelper._internal();
   static Database? _db;
 
-  Future<Database> get db async {
-    _db ??= await _init();
-    return _db!;
-  }
+  Future<Database> get db async { _db ??= await _init(); return _db!; }
 
   Future<Database> _init() async {
-    final path = join(await getDatabasesPath(), 'shops_radar_v2.db');
+    final path = join(await getDatabasesPath(), 'shop_radar_final.db');
     return await openDatabase(path, version: 1, onCreate: (db, version) async {
-      await db.execute(
-        "CREATE TABLE shops(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, lat REAL, lng REAL, icon TEXT, barcode TEXT, payments TEXT, offers TEXT)"
-      );
+      await db.execute("CREATE TABLE shops(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, lat REAL, lng REAL, barcode TEXT, isSpecial INTEGER, specialRule TEXT)");
+      await db.execute("CREATE TABLE carrier(id INTEGER PRIMARY KEY, code TEXT)");
+      await db.execute("CREATE TABLE payments(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, reward REAL)");
+      await db.insert('carrier', {'id': 1, 'code': ''});
     });
   }
 
-  Future<int> insertShop(Shop shop) async => (await db).insert('shops', shop.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
-  Future<List<Shop>> getShops() async => (await (await db).query('shops', orderBy: 'id DESC')).map((m) => Shop.fromMap(m)).toList();
-  Future<int> deleteShop(int id) async => (await db).delete('shops', where: 'id = ?', whereArgs: [id]);
+  Future<String> getCarrier() async => (await (await db).query('carrier')).first['code'] as String;
+  Future<void> updateCarrier(String code) async => (await db).update('carrier', {'code': code}, where: 'id = 1');
+  Future<List<PaymentApp>> getPayments() async => (await (await db).query('payments')).map((m) => PaymentApp.fromMap(m)).toList();
+  Future<void> addPayment(PaymentApp p) async => (await db).insert('payments', p.toMap());
+  Future<void> deletePayment(int id) async => (await db).delete('payments', where: 'id = ?', whereArgs: [id]);
+  Future<List<Shop>> getShops() async => (await (await db).query('shops')).map((m) => Shop.fromMap(m)).toList();
+  Future<void> insertShop(Shop s) async => (await db).insert('shops', s.toMap());
+  Future<void> deleteShop(int id) async => (await db).delete('shops', where: 'id = ?', whereArgs: [id]);
+  Future<void> clearAll() async {
+    final d = await db;
+    await d.delete('shops'); await d.delete('payments');
+    await d.update('carrier', {'code': ''}, where: 'id = 1');
+  }
 }
