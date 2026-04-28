@@ -1,30 +1,46 @@
-# 1. 載入 Flutter 的輔助腳本 (這行沒加會導致 "No dependencies" 錯誤)
-load File.join(File.dirname(File.realpath(__FILE__)), 'Flutter', 'podhelper.rb')
+name: iOS_Build
 
-platform :ios, '14.0'
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # 允許你手動點擊執行
 
-target 'Runner' do
-  use_frameworks!
-  use_modular_headers!
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # 2. 這行是關鍵，它會把 pubspec.yaml 裡的套件自動加入 iOS 編譯
-  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-end
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
 
-post_install do |installer|
-  installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
-    
-    target.build_configurations.each do |config|
-      # 權限標記 (定位、通知、感測器)
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
-        '$(inherited)',
-        'PERMISSION_LOCATION=1',
-        'PERMISSION_NOTIFICATIONS=1',
-        'PERMISSION_SENSORS=1',
-        'PERMISSION_BACKGROUND_LOCATION=1'
-      ]
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
-    end
-  end
-end
+      - name: Project Cleanup
+        run: |
+          rm -rf android
+          flutter create --platforms ios .
+          flutter pub get
+
+      - name: CocoaPods Setup
+        run: |
+          cd ios
+          # 檢查是否有 Podfile，沒有就建立一個
+          if [ ! -f Podfile ]; then
+            flutter create --platforms ios .
+          fi
+          pod repo update
+          pod install
+          cd ..
+
+      - name: Build iOS
+        run: flutter build ios --release --no-codesign
+
+      - name: Upload Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-radar-app
+          path: build/ios/iphoneos/Runner.app
