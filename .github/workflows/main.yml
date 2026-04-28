@@ -1,4 +1,4 @@
-name: "iOS 純享版完整編譯"
+name: "iOS 完整編譯 (排除 Android 錯誤)"
 
 on:
   push:
@@ -8,11 +8,9 @@ jobs:
   build-ios:
     runs-on: macos-latest
     steps:
-      # 1. 檢出程式碼
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. 設定 Flutter 環境 (建議 3.19.0)
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -20,28 +18,34 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # 3. 執行清理並安裝套件 (此時不會報 Android 錯誤)
+      # 核心步驟：強制移除所有 Android 相關配置，防止 pub get 報錯
+      - name: Strip Android Configuration
+        run: |
+          rm -rf android
+          flutter create --platforms ios .
+
       - name: Install dependencies
         run: |
           flutter clean
           flutter pub get
 
-      # 4. iOS 橋接與 CocoaPods (確保你的支付跳轉白名單生效)
-      - name: Install CocoaPods
+      # 處理 iOS 原生依賴 (確保權限標記與支付跳轉白名單被編入)
+      - name: CocoaPods Install
         run: |
           cd ios
           rm -rf Pods
           rm -rf Podfile.lock
-          # 強制清理 CocoaPods 緩存並更新
+          # 更新 repo 確保抓到最新版的 url_launcher_ios 等原生代碼
           pod install --repo-update
           cd ..
 
-      # 5. 編譯 iOS (不檢查 Android 簽署)
-      - name: Build iOS IPA
+      # 編譯正式版，--no-codesign 讓編譯在 GitHub 環境下也能產出完整的 .app 內容
+      - name: Build iOS
         run: flutter build ios --release --no-codesign
 
-      # 6. 收集成品
-      - name: Upload Build Artifact
+      # 上傳產出物，你可以在 GitHub Actions 頁面下載這個 Runner.app
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-radar-app
+          path: build/ios/iphoneos/Runner.app
