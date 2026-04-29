@@ -17,22 +17,30 @@ jobs:
           flutter-version: '3.19.0'
           channel: 'stable'
 
-      - name: Project Rebuild
+      - name: Fix Paths and Environment
         run: |
+          # 1. 物理刪除 Android (你不需要它)
           rm -rf android
-          # 刪除可能出錯的檔案
+          
+          # 2. 【核心動作】刪除所有紀錄了 E 槽路徑的暫存設定檔
+          # 這些檔案被刪除後，Flutter 會被迫重新抓取當前 Mac 的路徑
+          rm -f ios/Flutter/*.xcconfig
+          rm -f ios/Flutter/flutter_export_environment.sh
+          
+          # 3. 刪除導致 Swift 報錯的檔案
           rm -f ios/Runner/SceneDelegate.swift
-          # 強制讓 Flutter 工具修復 iOS 專案結構
+          
+          # 4. 強制重新配置 (這會修復 Podfile 與 podhelper 的連結)
           flutter create --platforms ios .
           flutter pub get
 
       - name: Build iOS Simulator
         run: |
           cd ios
-          pod repo update
-          pod install
+          # 重新安裝 Pods，此時 podhelper 已經會指向正確的 Mac 路徑
+          pod install --repo-update
           cd ..
-          # 編譯模擬器版本，100% 包含所有 Dart 邏輯與原生配置
+          # 編譯模擬器版，保證功能不遺漏
           flutter build ios --simulator --debug --no-codesign
 
       - name: Upload Artifact
