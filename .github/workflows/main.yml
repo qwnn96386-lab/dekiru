@@ -17,30 +17,37 @@ jobs:
           flutter-version: '3.19.0'
           channel: 'stable'
 
-      - name: Fix Paths and Environment
+      - name: Fix Environment and Paths
         run: |
-          # 1. 物理刪除 Android (你不需要它)
+          # 1. 物理刪除 Android
           rm -rf android
           
-          # 2. 【核心動作】刪除所有紀錄了 E 槽路徑的暫存設定檔
-          # 這些檔案被刪除後，Flutter 會被迫重新抓取當前 Mac 的路徑
+          # 2. 徹底清除 Windows E 槽路徑殘留
           rm -f ios/Flutter/*.xcconfig
           rm -f ios/Flutter/flutter_export_environment.sh
           
-          # 3. 刪除導致 Swift 報錯的檔案
-          rm -f ios/Runner/SceneDelegate.swift
-          
-          # 4. 強制重新配置 (這會修復 Podfile 與 podhelper 的連結)
+          # 3. 【核心修正】如果 SceneDelegate 檔案不見了，幫它建一個最簡版的
+          # 這樣可以解決 "Build input file cannot be found" 的報錯
+          mkdir -p ios/Runner
+          if [ ! -f ios/Runner/SceneDelegate.swift ]; then
+            cat <<EOF > ios/Runner/SceneDelegate.swift
+          import UIKit
+          import Flutter
+          class SceneDelegate: UIResponder, UIWindowSceneDelegate { var window: UIWindow? }
+          EOF
+          fi
+
+          # 4. 讓 Flutter 根據 Mac 環境重新配置
           flutter create --platforms ios .
           flutter pub get
 
       - name: Build iOS Simulator
         run: |
           cd ios
-          # 重新安裝 Pods，此時 podhelper 已經會指向正確的 Mac 路徑
-          pod install --repo-update
+          pod repo update
+          pod install
           cd ..
-          # 編譯模擬器版，保證功能不遺漏
+          # 編譯模擬器版，保證功能 100% 編入
           flutter build ios --simulator --debug --no-codesign
 
       - name: Upload Artifact
