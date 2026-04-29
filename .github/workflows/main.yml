@@ -1,4 +1,4 @@
-name: iOS_Pure_Build
+name: iOS_IPA_Build
 
 on:
   push:
@@ -17,42 +17,41 @@ jobs:
           flutter-version: '3.19.0'
           channel: 'stable'
 
-      - name: Fix Environment and Paths
+      - name: Fix Environment
         run: |
-          # 1. 物理刪除 Android
           rm -rf android
-          
-          # 2. 徹底清除 Windows E 槽路徑殘留
           rm -f ios/Flutter/*.xcconfig
           rm -f ios/Flutter/flutter_export_environment.sh
-          
-          # 3. 【核心修正】如果 SceneDelegate 檔案不見了，幫它建一個最簡版的
-          # 這樣可以解決 "Build input file cannot be found" 的報錯
+          # 建立最簡 SceneDelegate 確保 Xcode 找到檔案
           mkdir -p ios/Runner
-          if [ ! -f ios/Runner/SceneDelegate.swift ]; then
-            cat <<EOF > ios/Runner/SceneDelegate.swift
+          cat <<EOF > ios/Runner/SceneDelegate.swift
           import UIKit
           import Flutter
           class SceneDelegate: UIResponder, UIWindowSceneDelegate { var window: UIWindow? }
           EOF
-          fi
-
-          # 4. 讓 Flutter 根據 Mac 環境重新配置
           flutter create --platforms ios .
           flutter pub get
 
-      - name: Build iOS Simulator
+      - name: Build iOS for Real Device (No Codesign)
         run: |
           cd ios
           pod repo update
           pod install
           cd ..
-          # 編譯模擬器版，保證功能 100% 編入
-          flutter build ios --simulator --debug --no-codesign
+          # 關鍵：編譯實機 release 版，不檢查簽名
+          flutter build ios --release --no-codesign
 
-      - name: Upload Artifact
-        if: success()
+      - name: Package into IPA (For Sideloadly)
+        run: |
+          # Sideloadly 需要 Payload 資料夾結構
+          mkdir -p build/ios/iphoneos/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
+          cd build/ios/iphoneos
+          # 打包成 .ipa
+          zip -r radar_assistant.ipa Payload
+
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: ios-radar-app
-          path: build/ios/iphonesimulator/Runner.app
+          name: ios-radar-ipa
+          path: build/ios/iphoneos/radar_assistant.ipa
