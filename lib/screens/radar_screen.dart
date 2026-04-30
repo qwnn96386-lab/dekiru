@@ -29,28 +29,30 @@ class _RadarScreenState extends State<RadarScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("管理：${widget.geo.selectedShop?.name ?? '偵測中'}", style: const TextStyle(fontSize: 13)),
-        actions: [IconButton(icon: const Icon(Icons.add_circle_outline, size: 28), onPressed: () => _navAdd())],
+        title: Text("狀態：${widget.geo.selectedShop?.name ?? '偵測中'}", style: const TextStyle(fontSize: 13)),
+        actions: [
+          IconButton(icon: const Icon(Icons.add_circle_outline, size: 28), onPressed: () => _navAdd()),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           _title("載具管理 (唯一)"),
-          TextField(controller: _carrierCtrl, decoration: const InputDecoration(hintText: "輸入載具 /ABC1234"), onSubmitted: (v) => DBHelper().updateCarrier(v)),
+          TextField(controller: _carrierCtrl, decoration: const InputDecoration(hintText: "載具號碼"), onSubmitted: (v) => DBHelper().updateCarrier(v)),
           const SizedBox(height: 20),
           _title("支付管理"),
           ..._pays.map((p) => ListTile(title: Text(p.name), subtitle: Text("${p.reward}%"), trailing: IconButton(icon: const Icon(Icons.close), onPressed: () async { await DBHelper().deletePayment(p.id!); _load(); }))),
-          TextButton.icon(onPressed: _showAddPay, icon: const Icon(Icons.add), label: const Text("新增支付 (連動官方數據)")),
+          TextButton.icon(onPressed: _showAddPay, icon: const Icon(Icons.add), label: const Text("連動新增支付")),
           const Divider(height: 40),
           _title("會員與圍欄管理 (1, 2, 3...)"),
           Row(children: [const Text("半徑 "), Expanded(child: Slider(value: widget.geo.radarRange, min: 10, max: 200, onChanged: (v) { setState(() => widget.geo.radarRange = v); widget.geo.forceScan(); })), Text("${widget.geo.radarRange.round()}m")]),
           ..._shops.asMap().entries.map((e) => Card(child: ListTile(
             leading: CircleAvatar(child: Text("${e.key + 1}")),
-            title: Text(e.value.name), subtitle: Text(e.value.specialRule.isEmpty ? "一般商店" : "方案: ${e.value.specialRule}"),
+            title: Text(e.value.name),
             trailing: IconButton(icon: const Icon(Icons.close, color: Colors.red), onPressed: () async { await DBHelper().deleteShop(e.value.id!); _load(); }),
           ))),
           const SizedBox(height: 10),
-          OutlinedButton.icon(onPressed: _navAdd, icon: const Icon(Icons.add_location_alt_outlined), label: const Text("新增店家圍欄資訊")),
+          OutlinedButton.icon(onPressed: _navAdd, icon: const Icon(Icons.add), label: const Text("新增店家資訊")),
         ],
       ),
     );
@@ -59,7 +61,7 @@ class _RadarScreenState extends State<RadarScreen> {
   void _showAddPay() {
     String sel = "街口支付"; double rew = 3.0;
     showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: const Text("連動新增"),
+      title: const Text("新增支付"),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
         DropdownButtonFormField<String>(
           value: sel, items: ["街口支付", "Line Pay", "自定義"].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
@@ -89,16 +91,16 @@ class AddShopScreen extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(child: TextField(controller: lo, decoration: const InputDecoration(labelText: "經度"), keyboardType: TextInputType.number)),
         ]),
-        TextField(controller: bar, decoration: const InputDecoration(labelText: "條碼卡號")),
-        TextField(controller: rule, decoration: const InputDecoration(labelText: "滿減規則")),
+        TextField(controller: bar, decoration: const InputDecoration(labelText: "會員碼")),
+        TextField(controller: rule, decoration: const InputDecoration(labelText: "加碼方案")),
         const Spacer(),
         SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: () async {
           double? lat = double.tryParse(la.text); double? lng = double.tryParse(lo.text);
-          if (lat != null && lng != null && n.text.isNotEmpty) {
+          if (lat != null && lng != null) {
             await DBHelper().insertShop(Shop(name: n.text, lat: lat, lng: lng, barcode: bar.text, isSpecial: rule.text.isNotEmpty, specialRule: rule.text));
             Navigator.pop(context);
           }
-        }, child: const Text("儲存並返回"))),
+        }, child: const Text("完成儲存"))),
       ])),
     );
   }
