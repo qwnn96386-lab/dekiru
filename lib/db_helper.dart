@@ -25,9 +25,15 @@ class DBHelper {
   factory DBHelper() => _instance;
   DBHelper._internal();
   static Database? _db;
-  Future<Database> get db async { _db ??= await _init(); return _db!; }
+
+  Future<Database> get db async {
+    _db ??= await _init();
+    return _db!;
+  }
+
   Future<Database> _init() async {
-    final path = join(await getDatabasesPath(), 'shop_radar_final_v1.db');
+    // 使用新版本名稱，防止讀取舊資料導致崩潰
+    final path = join(await getDatabasesPath(), 'radar_final_v99.db');
     return await openDatabase(path, version: 1, onCreate: (db, version) async {
       await db.execute("CREATE TABLE shops(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, lat REAL, lng REAL, barcode TEXT, isSpecial INTEGER, specialRule TEXT)");
       await db.execute("CREATE TABLE carrier(id INTEGER PRIMARY KEY, code TEXT)");
@@ -35,6 +41,7 @@ class DBHelper {
       await db.insert('carrier', {'id': 1, 'code': ''});
     });
   }
+
   Future<String> getCarrier() async => (await (await db).query('carrier')).first['code'] as String;
   Future<void> updateCarrier(String code) async => (await db).update('carrier', {'code': code}, where: 'id = 1');
   Future<List<PaymentApp>> getPayments() async => (await (await db).query('payments')).map((m) => PaymentApp.fromMap(m)).toList();
@@ -43,4 +50,9 @@ class DBHelper {
   Future<List<Shop>> getShops() async => (await (await db).query('shops')).map((m) => Shop.fromMap(m)).toList();
   Future<void> insertShop(Shop s) async => (await db).insert('shops', s.toMap());
   Future<void> deleteShop(int id) async => (await db).delete('shops', where: 'id = ?', whereArgs: [id]);
+  Future<void> clearAll() async {
+    final d = await db;
+    await d.delete('shops'); await d.delete('payments');
+    await d.update('carrier', {'code': ''}, where: 'id = 1');
+  }
 }
