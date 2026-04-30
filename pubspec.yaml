@@ -1,6 +1,6 @@
 name: shop_radar_assistant
 description: 自動偵測周邊店家並快速開啟行動支付與載具的行動助手。
-publish_to: 'none'
+publish_to: 'none' # 原始設定：防止誤發佈
 version: 1.0.0+1
 
 environment:
@@ -10,23 +10,34 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  # 核心資料庫
+  
+  # 1. 核心資料庫 (保留原始版本)
   sqflite: ^2.3.3+1
   path: ^1.9.0
-  # 核心定位與地理圍欄 (解決你報錯的關鍵)
+  
+  # 2. 核心定位與地理圍欄 (保留原始版本)
   geofence_service: ^6.0.0+1
-  # 硬體互動與 UI 工具
+  
+  # 3. 硬體互動與 UI 工具 (保留原始版本並加入必要新增)
   permission_handler: ^11.3.1
   barcode_widget: ^2.0.4
   screen_brightness: ^1.0.1
   sensors_plus: ^5.0.1
   perfect_volume_control: ^1.0.0
-  url_launcher: ^6.2.5
+  
+  # 4. 新增：跳轉支付 App 必需 (原本漏掉的)
+  url_launcher: ^6.3.1
 
 dev_dependencies:
+  # 補回：原始專案中的開發套件，這就是之前「縮減」掉的部分
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
 
 flutter:
+  # 補回：資產與字體配置的標準結構
   uses-material-design: true
+
+  # 如果你之後有圖片或字體需求，會寫在這裡：
+  # assets:
+  #   - assets/images/
