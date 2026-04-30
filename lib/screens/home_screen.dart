@@ -23,11 +23,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _load();
+    // 翻轉偵測
     accelerometerEvents.listen((e) {
       if (!mounted) return;
       if (e.y > 7.5 && !_isExp) _toggle(true);
       else if (e.y < 3.0 && _isExp) _toggle(false);
     });
+    // 音量鍵偵測
     PerfectVolumeControl.stream.listen((v) => _handleVolumeKey());
   }
 
@@ -46,19 +48,20 @@ class _HomeScreenState extends State<HomeScreen> {
   void _handleVolumeKey() {
     if (_pays.isEmpty) return;
     final s = widget.geo.selectedShop;
-    if (s != null && s.isSpecial) _showChoice(); else _launchApp(_pays.first.name);
+    if (s != null && s.isSpecial) _showChoice();
+    else _launchPay(_pays.first.name);
   }
 
-  void _launchApp(String name) async {
+  void _launchPay(String name) async {
     String url = name.contains("街口") ? "jkos://" : "linepay://";
     if (await canLaunchUrl(Uri.parse(url))) await launchUrl(Uri.parse(url));
   }
 
   void _showChoice() {
     showModalBottomSheet(context: context, builder: (c) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const ListTile(title: Text("請選擇支付方案")),
-      ListTile(leading: const Icon(Icons.star, color: Colors.red), title: const Text("方案 A：特別滿減回饋"), onTap: () { Navigator.pop(c); _launchApp(_pays.first.name); }),
-      ListTile(leading: const Icon(Icons.percent, color: Colors.blue), title: const Text("方案 B：常態支付回饋"), onTap: () { Navigator.pop(c); _launchApp(_pays.first.name); }),
+      const ListTile(title: Text("選擇方案", style: TextStyle(fontWeight: FontWeight.bold))),
+      ListTile(leading: const Icon(Icons.star, color: Colors.red), title: const Text("方案 A：滿減回饋"), onTap: () { Navigator.pop(c); _launchPay(_pays.first.name); }),
+      ListTile(leading: const Icon(Icons.percent, color: Colors.blue), title: const Text("方案 B：常態回饋"), onTap: () { Navigator.pop(c); _launchPay(_pays.first.name); }),
     ])));
   }
 
@@ -83,9 +86,9 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8),
         padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: active ? Colors.blue : Colors.transparent, width: 2.5)),
+        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: active ? Colors.blue : Colors.transparent, width: 2)),
         child: Stack(children: [
-          CircleAvatar(radius: 25, backgroundColor: Colors.grey[100], child: Text(s.name[0])),
+          CircleAvatar(radius: 25, backgroundColor: Colors.white, child: Text(s.name[0])),
           if (s.isSpecial) Positioned(right: 0, top: 0, child: Container(width: 14, height: 14, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle))),
         ]),
       ),
@@ -106,18 +109,23 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _row(String n, String r, {bool isRed = false}) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(n), Text(r, style: TextStyle(fontSize: isRed ? 16 : 24, fontWeight: FontWeight.bold, color: isRed ? Colors.red : Colors.blue))]);
 
   Widget _barcodeDrawer(Shop? s) => AnimatedPositioned(
-    duration: const Duration(milliseconds: 300), bottom: 0, left: 0, right: 0, height: _isExp ? 450 : 60,
+    duration: const Duration(milliseconds: 300), bottom: 0, left: 0, right: 0,
+    height: _isExp ? 450 : 65, // 高度保持 65 確保可以被點到
     child: GestureDetector(
-      behavior: HitTestBehavior.opaque, onTap: () => _toggle(!_isExp),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _toggle(!_isExp),
       child: Container(
         decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(30)), boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 15)]),
         child: Column(children: [
-          const SizedBox(height: 12), Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
-          if (!_isExp) const Icon(Icons.keyboard_arrow_up, color: Colors.grey),
+          const SizedBox(height: 12),
+          Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+          if (!_isExp) const Padding(padding: EdgeInsets.only(top: 5), child: Icon(Icons.keyboard_arrow_up, color: Colors.grey)),
           if (_isExp) Expanded(child: SingleChildScrollView(child: Column(children: [
-            const SizedBox(height: 20), const Text("手機載具", style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 20),
+            const Text("手機載具", style: TextStyle(color: Colors.grey)),
             BarcodeWidget(barcode: Barcode.code39(), data: _carrier, width: 280, height: 80),
-            const SizedBox(height: 40), Text("${s?.name ?? ''} 會員碼", style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 40),
+            Text("${s?.name ?? ''} 會員碼", style: const TextStyle(color: Colors.grey)),
             BarcodeWidget(barcode: Barcode.code128(), data: s?.barcode ?? "", width: 280, height: 80),
           ])))
         ]),
