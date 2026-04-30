@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   _load() async {
     _carrier = await DBHelper().getCarrier();
     _pays = await DBHelper().getPayments();
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   void _toggle(bool exp) async {
@@ -46,21 +46,20 @@ class _HomeScreenState extends State<HomeScreen> {
   void _handleVolumeKey() {
     if (_pays.isEmpty) return;
     final s = widget.geo.selectedShop;
-    if (s != null && s.isSpecial) _showChoice();
-    else _launchPay(_pays.first.name);
+    if (s != null && s.isSpecial) _showChoice(); else _launchApp(_pays.first.name);
+  }
+
+  void _launchApp(String name) async {
+    String url = name.contains("街口") ? "jkos://" : "linepay://";
+    if (await canLaunchUrl(Uri.parse(url))) await launchUrl(Uri.parse(url));
   }
 
   void _showChoice() {
     showModalBottomSheet(context: context, builder: (c) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const ListTile(title: Text("請選擇支付方案", style: TextStyle(fontWeight: FontWeight.bold))),
-      ListTile(leading: const Icon(Icons.star, color: Colors.red), title: const Text("方案 A：特別滿減回饋"), onTap: () { Navigator.pop(c); _launchPay(_pays.first.name); }),
-      ListTile(leading: const Icon(Icons.percent, color: Colors.blue), title: const Text("方案 B：常態支付回饋"), onTap: () { Navigator.pop(c); _launchPay(_pays.first.name); }),
+      const ListTile(title: Text("請選擇支付方案")),
+      ListTile(leading: const Icon(Icons.star, color: Colors.red), title: const Text("方案 A：特別滿減回饋"), onTap: () { Navigator.pop(c); _launchApp(_pays.first.name); }),
+      ListTile(leading: const Icon(Icons.percent, color: Colors.blue), title: const Text("方案 B：常態支付回饋"), onTap: () { Navigator.pop(c); _launchApp(_pays.first.name); }),
     ])));
-  }
-
-  void _launchPay(String name) async {
-    String url = name.contains("街口") ? "jkos://" : "linepay://";
-    if (await canLaunchUrl(Uri.parse(url))) await launchUrl(Uri.parse(url));
   }
 
   @override
@@ -73,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 30),
         if (s != null) _card(s) else const Expanded(child: Center(child: Text("雷達掃描中..."))),
       ]),
-      _barcode(s), // 底部細長條
+      _barcodeDrawer(s),
     ]);
   }
 
@@ -84,10 +83,10 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8),
         padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: active ? Colors.blue : Colors.transparent, width: 2)),
+        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: active ? Colors.blue : Colors.transparent, width: 2.5)),
         child: Stack(children: [
           CircleAvatar(radius: 25, backgroundColor: Colors.grey[100], child: Text(s.name[0])),
-          if (s.isSpecial) Positioned(right: 0, top: 0, child: Container(width: 12, height: 12, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle))),
+          if (s.isSpecial) Positioned(right: 0, top: 0, child: Container(width: 14, height: 14, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle))),
         ]),
       ),
     );
@@ -95,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _card(Shop s) => Container(
     margin: const EdgeInsets.all(25), padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: s.isSpecial ? Colors.red : Colors.blue, width: 2.5), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)]),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: s.isSpecial ? Colors.red : Colors.blue, width: 3), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)]),
     child: Column(mainAxisSize: MainAxisSize.min, children: [
       Text(s.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
       const Divider(height: 30),
@@ -104,19 +103,24 @@ class _HomeScreenState extends State<HomeScreen> {
     ]),
   );
 
-  Widget _row(String n, String r, {bool isRed = false}) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(n), Text(r, style: TextStyle(fontSize: isRed ? 18 : 26, fontWeight: FontWeight.bold, color: isRed ? Colors.red : Colors.blue))]);
+  Widget _row(String n, String r, {bool isRed = false}) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(n), Text(r, style: TextStyle(fontSize: isRed ? 16 : 24, fontWeight: FontWeight.bold, color: isRed ? Colors.red : Colors.blue))]);
 
-  Widget _barcode(Shop? s) => AnimatedPositioned(
-    duration: const Duration(milliseconds: 300), bottom: 0, left: 0, right: 0, height: _isExp ? 420 : 40,
+  Widget _barcodeDrawer(Shop? s) => AnimatedPositioned(
+    duration: const Duration(milliseconds: 300), bottom: 0, left: 0, right: 0, height: _isExp ? 450 : 60,
     child: GestureDetector(
-      onTap: () => _toggle(!_isExp),
+      behavior: HitTestBehavior.opaque, onTap: () => _toggle(!_isExp),
       child: Container(
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(25)), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)]),
-        child: _isExp ? Column(children: [
-          const SizedBox(height: 10), Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
-          const SizedBox(height: 25), const Text("手機載具"), BarcodeWidget(barcode: Barcode.code39(), data: _carrier, width: 260, height: 75),
-          const SizedBox(height: 35), Text("${s?.name ?? ''} 會員碼"), BarcodeWidget(barcode: Barcode.code128(), data: s?.barcode ?? "", width: 260, height: 75),
-        ]) : Center(child: Container(width: 60, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(30)), boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 15)]),
+        child: Column(children: [
+          const SizedBox(height: 12), Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+          if (!_isExp) const Icon(Icons.keyboard_arrow_up, color: Colors.grey),
+          if (_isExp) Expanded(child: SingleChildScrollView(child: Column(children: [
+            const SizedBox(height: 20), const Text("手機載具", style: TextStyle(color: Colors.grey)),
+            BarcodeWidget(barcode: Barcode.code39(), data: _carrier, width: 280, height: 80),
+            const SizedBox(height: 40), Text("${s?.name ?? ''} 會員碼", style: TextStyle(color: Colors.grey)),
+            BarcodeWidget(barcode: Barcode.code128(), data: s?.barcode ?? "", width: 280, height: 80),
+          ])))
+        ]),
       ),
     ),
   );
