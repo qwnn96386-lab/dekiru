@@ -21,7 +21,7 @@ class _RadarScreenState extends State<RadarScreen> {
     _carrierCtrl.text = await DBHelper().getCarrier();
     _shops = await DBHelper().getShops();
     _pays = await DBHelper().getPayments();
-    setState(() {});
+    if (mounted) setState(() {});
     widget.geo.forceScan();
   }
 
@@ -29,26 +29,28 @@ class _RadarScreenState extends State<RadarScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("狀態: ${widget.geo.selectedShop != null ? '在「${widget.geo.selectedShop!.name}」內' : '偵測中'}", style: const TextStyle(fontSize: 13)),
-        actions: [IconButton(icon: const Icon(Icons.add), onPressed: () => _navAdd())],
+        title: Text("管理：${widget.geo.selectedShop?.name ?? '偵測中'}", style: const TextStyle(fontSize: 13)),
+        actions: [IconButton(icon: const Icon(Icons.add_circle_outline, size: 28), onPressed: () => _navAdd())],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           _title("載具管理 (唯一)"),
-          TextField(controller: _carrierCtrl, decoration: const InputDecoration(hintText: "輸入載具號碼"), onSubmitted: (v) => DBHelper().updateCarrier(v)),
+          TextField(controller: _carrierCtrl, decoration: const InputDecoration(hintText: "輸入載具 /ABC1234"), onSubmitted: (v) => DBHelper().updateCarrier(v)),
           const SizedBox(height: 20),
           _title("支付管理"),
-          ..._pays.map((p) => ListTile(title: Text(p.name), subtitle: Text("回饋 ${p.reward}%"), trailing: IconButton(icon: const Icon(Icons.close), onPressed: () async { await DBHelper().deletePayment(p.id!); _load(); }))),
-          TextButton.icon(onPressed: _showAddPay, icon: const Icon(Icons.add), label: const Text("新增支付 (官方連動)")),
+          ..._pays.map((p) => ListTile(title: Text(p.name), subtitle: Text("${p.reward}%"), trailing: IconButton(icon: const Icon(Icons.close), onPressed: () async { await DBHelper().deletePayment(p.id!); _load(); }))),
+          TextButton.icon(onPressed: _showAddPay, icon: const Icon(Icons.add), label: const Text("新增支付 (連動官方數據)")),
           const Divider(height: 40),
           _title("會員與圍欄管理 (1, 2, 3...)"),
           Row(children: [const Text("半徑 "), Expanded(child: Slider(value: widget.geo.radarRange, min: 10, max: 200, onChanged: (v) { setState(() => widget.geo.radarRange = v); widget.geo.forceScan(); })), Text("${widget.geo.radarRange.round()}m")]),
           ..._shops.asMap().entries.map((e) => Card(child: ListTile(
             leading: CircleAvatar(child: Text("${e.key + 1}")),
-            title: Text(e.value.name), subtitle: Text(e.value.specialRule.isEmpty ? "一般商戶" : "加碼: ${e.value.specialRule}"),
+            title: Text(e.value.name), subtitle: Text(e.value.specialRule.isEmpty ? "一般商店" : "方案: ${e.value.specialRule}"),
             trailing: IconButton(icon: const Icon(Icons.close, color: Colors.red), onPressed: () async { await DBHelper().deleteShop(e.value.id!); _load(); }),
           ))),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(onPressed: _navAdd, icon: const Icon(Icons.add_location_alt_outlined), label: const Text("新增店家圍欄資訊")),
         ],
       ),
     );
@@ -57,11 +59,10 @@ class _RadarScreenState extends State<RadarScreen> {
   void _showAddPay() {
     String sel = "街口支付"; double rew = 3.0;
     showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: const Text("連動新增支付"),
+      title: const Text("連動新增"),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
-        DropdownButton<String>(
-          value: sel, isExpanded: true,
-          items: ["街口支付", "Line Pay", "自定義"].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+        DropdownButtonFormField<String>(
+          value: sel, items: ["街口支付", "Line Pay", "自定義"].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
           onChanged: (v) => setState(() { sel = v!; rew = (v == "街口支付") ? 3.0 : 2.0; }),
         ),
         TextField(decoration: const InputDecoration(labelText: "回饋 %"), keyboardType: TextInputType.number, onChanged: (v) => rew = double.tryParse(v) ?? 0),
@@ -78,23 +79,23 @@ class AddShopScreen extends StatelessWidget {
   const AddShopScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    final n = TextEditingController(), lat = TextEditingController(), lng = TextEditingController(), bar = TextEditingController(), rule = TextEditingController();
+    final n = TextEditingController(), la = TextEditingController(), lo = TextEditingController(), bar = TextEditingController(), rule = TextEditingController();
     return Scaffold(
-      appBar: AppBar(title: const Text("新增店家資訊 (二級)")),
+      appBar: AppBar(title: const Text("新增店家")),
       body: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
-        TextField(controller: n, decoration: const InputDecoration(labelText: "店家名稱")),
+        TextField(controller: n, decoration: const InputDecoration(labelText: "店名")),
         Row(children: [
-          Expanded(child: TextField(controller: lat, decoration: const InputDecoration(labelText: "緯度"), keyboardType: TextInputType.number)),
+          Expanded(child: TextField(controller: la, decoration: const InputDecoration(labelText: "緯度"), keyboardType: TextInputType.number)),
           const SizedBox(width: 10),
-          Expanded(child: TextField(controller: lng, decoration: const InputDecoration(labelText: "經度"), keyboardType: TextInputType.number)),
+          Expanded(child: TextField(controller: lo, decoration: const InputDecoration(labelText: "經度"), keyboardType: TextInputType.number)),
         ]),
-        TextField(controller: bar, decoration: const InputDecoration(labelText: "會員條碼編號")),
-        TextField(controller: rule, decoration: const InputDecoration(labelText: "加碼方案 (如: 滿500減50)")),
+        TextField(controller: bar, decoration: const InputDecoration(labelText: "條碼卡號")),
+        TextField(controller: rule, decoration: const InputDecoration(labelText: "滿減規則")),
         const Spacer(),
         SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: () async {
-          double? la = double.tryParse(lat.text); double? ln = double.tryParse(lng.text);
-          if (la != null && ln != null) {
-            await DBHelper().insertShop(Shop(name: n.text, lat: la, lng: ln, barcode: bar.text, isSpecial: rule.text.isNotEmpty, specialRule: rule.text));
+          double? lat = double.tryParse(la.text); double? lng = double.tryParse(lo.text);
+          if (lat != null && lng != null && n.text.isNotEmpty) {
+            await DBHelper().insertShop(Shop(name: n.text, lat: lat, lng: lng, barcode: bar.text, isSpecial: rule.text.isNotEmpty, specialRule: rule.text));
             Navigator.pop(context);
           }
         }, child: const Text("儲存並返回"))),
