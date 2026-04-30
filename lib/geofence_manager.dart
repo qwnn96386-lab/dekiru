@@ -34,8 +34,14 @@ class GeofenceManager {
       if (d <= radarRange) found.add(shop);
     }
     nearbyShops = found.take(4).toList();
-    if (selectedShop == null && nearbyShops.isNotEmpty) selectedShop = nearbyShops.first;
-    else if (nearbyShops.isEmpty) selectedShop = null;
+    
+    if (selectedShop == null && nearbyShops.isNotEmpty) {
+      selectedShop = nearbyShops.first;
+    } else if (nearbyShops.isEmpty) {
+      selectedShop = null;
+    } else if (selectedShop != null && !nearbyShops.any((s) => s.id == selectedShop!.id)) {
+      selectedShop = nearbyShops.first;
+    }
     onStatusUpdate?.call();
   }
 
